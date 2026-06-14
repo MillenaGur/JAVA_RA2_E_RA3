@@ -6,6 +6,11 @@ import model.Consulta;
 import model.Medico;
 import model.Paciente;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,6 +49,77 @@ public class Cadastro {
 
     public List<Consulta> getConsultas() {
         return consultas;
+    }
+
+    public void carregarDadosCsv(
+            String caminhoMedicos,
+            String caminhoPacientes,
+            String caminhoConsultas) throws IOException {
+
+        carregarMedicosCsv(caminhoMedicos);
+        carregarPacientesCsv(caminhoPacientes);
+        carregarConsultasCsv(caminhoConsultas);
+    }
+
+    public void carregarMedicosCsv(String caminhoArquivo) throws IOException {
+
+        for (String linha : Files.readAllLines(Paths.get(caminhoArquivo))) {
+
+            if (linha.trim().isEmpty() || linha.startsWith("nome,")) {
+                continue;
+            }
+
+            String[] dados = linha.split(",");
+            String nome = dados[0].trim();
+            int codigo = Integer.parseInt(dados[1].trim());
+
+            adicionarMedico(new Medico(nome, codigo));
+        }
+    }
+
+    public void carregarPacientesCsv(String caminhoArquivo) throws IOException {
+
+        for (String linha : Files.readAllLines(Paths.get(caminhoArquivo))) {
+
+            if (linha.trim().isEmpty() || linha.startsWith("nome,")) {
+                continue;
+            }
+
+            String[] dados = linha.split(",");
+            String nome = dados[0].trim();
+            String cpf = dados[1].trim();
+
+            adicionarPaciente(new Paciente(nome, cpf));
+        }
+    }
+
+    public void carregarConsultasCsv(String caminhoArquivo) throws IOException {
+
+        for (String linha : Files.readAllLines(Paths.get(caminhoArquivo))) {
+
+            if (linha.trim().isEmpty() || linha.startsWith("data,")) {
+                continue;
+            }
+
+            String[] dados = linha.split(",");
+            LocalDate data = LocalDate.parse(dados[0].trim());
+            LocalTime horario = LocalTime.parse(dados[1].trim());
+            int codigoMedico = Integer.parseInt(dados[2].trim());
+            String cpfPaciente = dados[3].trim();
+
+            Medico medico = buscarMedicoPorCodigo(codigoMedico);
+            Paciente paciente = buscarPacientePorCpf(cpfPaciente);
+
+            if (medico == null || paciente == null) {
+                throw new IllegalArgumentException("Consulta referencia médico ou paciente inexistente.");
+            }
+
+            Consulta consulta = new Consulta(data, horario, medico, paciente);
+
+            adicionarConsulta(consulta);
+            paciente.adicionarConsulta(consulta);
+            medico.adicionarPaciente(paciente);
+        }
     }
 
     public Medico buscarMedicoPorCodigo(int codigo) {
